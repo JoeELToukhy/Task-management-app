@@ -1,12 +1,45 @@
-import React, { useState } from 'react'
+import React, { useState, useLayoutEffect, useEffect} from 'react'
 import { useDispatch } from 'react-redux';
-import { deleteTask, updateTask } from '../redux/actions';
+import { addTask, deleteTask, updateTask } from '../redux/actions';
+import axios from "axios";
+import TasksApi from '../services/tasksApi'
+
+var tasks = [];
+
 
 export default function TaskItem({ task }) {
     const [editable, setEditable] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [description, setDescription] = useState()
     let dispatch = useDispatch();
+
+    const loadTasks = () => {
+        axios.get('http://localhost:8081/api/tasks')
+        .then(res => {
+            // console.log(res.data[0].id)
+            for (let index = 0; index < res.data.length; index++) {
+                tasks.push(res.data[index].title);
+                console.log(task)                
+            }})
+        .catch(TasksApi.errorHandler);
+    }
+    const edittask = (callback) => {
+        axios.post('api/tasks', task)
+        .then(() => TasksApi.getTasks(callback))
+        .catch(TasksApi.errorHandler);
+    }
+
+    const deletetask = (id, callback) => {
+        axios.delete('api/tasks/' + id)
+            .then(() => TasksApi.getTasks(callback))
+            .catch(TasksApi.errorHandler);
+    }
+
+    useLayoutEffect(() => {
+        loadTasks();
+        console.log(tasks)
+      }, []);
+
     return (
         <div>
             <div className="row mx-2 align-items-center">
@@ -21,21 +54,6 @@ export default function TaskItem({ task }) {
                     }
                     />:<h4>{task.title}</h4>}
                 </div>
-                <button 
-                    onClick={() => {
-                        dispatch(updateTask(
-                            {
-                                ...task,
-                                title: title
-                            }
-                        ))
-                        if (editable) {
-                            setTitle(task.title)
-                        }
-                        setEditable(!editable)
-                    }}
-                    className='btn btn-primary m-2'
-                >Edit</button>
                 <div className="col">
                     {editable ? <input 
                     type="text" 
@@ -51,18 +69,23 @@ export default function TaskItem({ task }) {
                         dispatch(updateTask(
                             {
                                 ...task,
-                                description: description
+                                description: description,
+                                title: title
                             }
                         ))
                         if (editable) {
                             setTitle(task.description)
                         }
                         setEditable(!editable)
+                        edittask();
                     }}
                     className='btn btn-primary m-2'
                 >Edit</button>
                 <button 
-                    onClick={() => dispatch(deleteTask(task.id))}
+                    onClick={() => {
+                        dispatch(deleteTask(task.id))
+                        deletetask();
+                    }}
                     className='btn btn-danger m-2'
                 >Delete</button>
             </div>
